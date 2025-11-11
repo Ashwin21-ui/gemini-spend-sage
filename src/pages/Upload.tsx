@@ -4,8 +4,8 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Upload as UploadIcon, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 const Upload = () => {
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
@@ -28,36 +28,45 @@ const Upload = () => {
     maxSize: 10 * 1024 * 1024, // 10MB
   });
 
-  const handleUpload = async () => {
-    if (!file) return;
+const handleUpload = async () => {
+  if (!file) return;
+  setUploading(true);
 
-    setUploading(true);
-    
-    try {
-      // Store file for processing page
-      sessionStorage.setItem('uploadedFile', JSON.stringify({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      }));
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
 
-      toast({
-        title: "File ready!",
-        description: "Starting analysis...",
-      });
+    const res = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/upload-bank-statement`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
-      setTimeout(() => {
-        navigate("/processing");
-      }, 500);
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "Please try again",
-        variant: "destructive",
-      });
-      setUploading(false);
-    }
-  };
+    const data = await res.json();
+
+    if (!res.ok || !data.status) throw new Error("Upload failed");
+
+    // ✅ Save extracted result for processing screen
+    sessionStorage.setItem("extractedData", JSON.stringify(data.extracted_json || {}));
+
+    navigate("/processing");
+
+  } catch (error) {
+    toast({
+      title: "Upload failed",
+      description: "Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setUploading(false);
+  }
+};
+
+
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/5 flex items-center justify-center p-4">

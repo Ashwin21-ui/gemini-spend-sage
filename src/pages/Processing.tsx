@@ -17,31 +17,35 @@ const Processing = () => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Cycle through messages
+    // Rotate loading messages
     const messageInterval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
     }, 1500);
 
-    // Update progress
+    // Smooth Progress
     const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 2;
-      });
+      setProgress((prev) => Math.min(prev + 2, 100));
     }, 100);
 
-    // Navigate to chat after processing
-    const timeout = setTimeout(() => {
-      navigate("/chat");
-    }, 6000);
+    // ✅ Check backend completion
+    const checkDataInterval = setInterval(() => {
+      const data = sessionStorage.getItem("extractedData");
+      if (data) {
+        clearInterval(checkDataInterval);
+        clearInterval(progressInterval);
+        setProgress(100); // instantly finish progress bar
+
+        // Small delay to show "All Set!" before navigating
+        setTimeout(() => {
+          navigate("/chat");
+        }, 1000);
+      }
+    }, 500);
 
     return () => {
       clearInterval(messageInterval);
       clearInterval(progressInterval);
-      clearTimeout(timeout);
+      clearInterval(checkDataInterval);
     };
   }, [navigate]);
 

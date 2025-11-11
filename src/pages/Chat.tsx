@@ -14,12 +14,15 @@ interface Message {
 const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi! I've analyzed your bank statement. I can help you understand your spending, identify patterns, and answer questions about your finances. What would you like to know?",
+      content:
+        "Hi! I've analyzed your bank statement. I can help you understand your spending, identify patterns, and answer questions about your finances. What would you like to know?",
     },
   ]);
+
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -28,9 +31,47 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  useEffect(scrollToBottom, [messages]);
+
+  // ✅ Add this effect to auto-insert spending summary
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const dataStr = sessionStorage.getItem("extractedData");
+  if (!dataStr) return;
+
+  const data = JSON.parse(dataStr);
+  const summary = data?.summary;
+  const account = data?.account_details;
+
+  // ✅ Prevent duplicate summary messages
+  const alreadyHasSummary = messages.some(m =>
+    m.content.includes("**Activity Summary**")
+  );
+  if (alreadyHasSummary) return;
+
+  if (summary && account) {
+    const summaryMessage: Message = {
+      role: "assistant",
+      content: `Here's a quick overview of your recent spending:\n
+• **Account Holder:** ${account.account_holder_name}
+• **Account Number:** ${account.account_number}
+• **Statement Period:** ${account.statement_start_date} → ${account.statement_end_date}
+• **Opening Balance:** ${summary.opening_balance}
+• **Closing Balance:** ${summary.closing_balance}
+
+**Activity Summary**
+• Total Credits: ${summary.total_credits} (${summary.credit_count} entries)
+• Total Debits: ${summary.total_debits} (${summary.debit_count} entries)
+
+You can ask things like:
+• "Where did I spend the most?"
+• "Show me recurring expenses"
+• "How much did I spend on food?"`,
+    };
+
+    setMessages((prev) => [prev[0], summaryMessage, ...prev.slice(1)]);
+  }
+}, []);
+
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
