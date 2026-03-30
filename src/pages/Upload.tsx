@@ -76,7 +76,9 @@ const handleUpload = async () => {
 
     const data = await res.json();
 
-    if (!res.ok || !data.status) throw new Error("Upload failed");
+    if (!res.ok || !data.status) {
+      throw new Error(data.detail || "Upload failed");
+    }
 
     // ✅ Save extracted result and explicitly bind the user's specific backend account scope locally
     sessionStorage.setItem("extractedData", JSON.stringify(data.extracted_json || {}));
@@ -86,10 +88,11 @@ const handleUpload = async () => {
 
     navigate("/processing");
 
-  } catch (error) {
+  } catch (error: any) {
+    const errorMessage = error.message || "Please try again.";
     toast({
       title: "Upload failed",
-      description: "Please try again.",
+      description: errorMessage,
       variant: "destructive",
     });
   } finally {
