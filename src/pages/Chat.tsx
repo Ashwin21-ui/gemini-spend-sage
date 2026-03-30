@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Send, ArrowLeft, Sparkles, User, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,6 +14,7 @@ interface Message {
 const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { token } = useAuth();
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -82,15 +83,30 @@ You can ask things like:
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: { messages: [...messages, userMessage] },
+      const account_id = localStorage.getItem("account_id");
+      if (!account_id) {
+        throw new Error("No active account session found. Please upload a bank statement first.");
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          account_id: account_id,
+          query: input,
+          top_k: 10
+        }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Failed to analyze data");
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: data.response,
+        content: data.answer,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
@@ -124,14 +140,16 @@ You can ask things like:
               <p className="text-sm text-muted-foreground">AI-powered insights</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/upload")}
-            className="rounded-xl"
-          >
-            Upload New
-          </Button>
+          <div className="flex flex-col text-right">
+             <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/upload")}
+                className="rounded-xl border-primary/20 hover:border-primary/50 text-primary"
+              >
+                + Upload PDF
+             </Button>
+          </div>
         </div>
       </div>
 

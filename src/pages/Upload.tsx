@@ -4,12 +4,39 @@ import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Upload as UploadIcon, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 const Upload = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { token } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isCheckingData, setIsCheckingData] = useState(false);
+
+  const handleGoToChat = async () => {
+    setIsCheckingData(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/user-data/check`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error("Verification failed");
+      
+      if (data.has_data && data.latest_account_id) {
+        localStorage.setItem("account_id", data.latest_account_id);
+        navigate("/chat");
+      }
+    } catch (err: any) {
+      toast({
+        title: "No Analysis Data Found",
+        description: "Please upload your bank statement below to proceed.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingData(false);
+    }
+  };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -37,9 +64,12 @@ const handleUpload = async () => {
     formData.append("file", file);
 
     const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/api/upload-bank-statement`,
+      `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/upload-bank-statement`,
       {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         body: formData,
       }
     );
@@ -48,8 +78,11 @@ const handleUpload = async () => {
 
     if (!res.ok || !data.status) throw new Error("Upload failed");
 
-    // ✅ Save extracted result for processing screen
+    // ✅ Save extracted result and explicitly bind the user's specific backend account scope locally
     sessionStorage.setItem("extractedData", JSON.stringify(data.extracted_json || {}));
+    if (data.account_id) {
+      localStorage.setItem("account_id", data.account_id);
+    }
 
     navigate("/processing");
 
@@ -73,9 +106,18 @@ const handleUpload = async () => {
       <div className="max-w-2xl w-full animate-fade-in">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-3">Upload Your Statement</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Drag and drop your bank statement or click to browse
           </p>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleGoToChat}
+            disabled={isCheckingData}
+            className="text-primary hover:text-primary/80"
+          >
+            {isCheckingData ? "Connecting..." : "Already uploaded? Go straight to Chat"}
+          </Button>
         </div>
 
         {/* Drop Zone */}

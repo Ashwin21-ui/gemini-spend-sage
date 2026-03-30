@@ -1,12 +1,57 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, TrendingUp, PiggyBank, Target } from "lucide-react";
+import { Sparkles, TrendingUp, PiggyBank, Target, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const Welcome = () => {
   const navigate = useNavigate();
+  const { user, logout, isAuthenticated, token } = useAuth();
+  const { toast } = useToast();
+  const [isCheckingData, setIsCheckingData] = useState(false);
+
+  const handleGoToChat = async () => {
+    setIsCheckingData(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/user-data/check`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Verification failed");
+      }
+      if (data.has_data && data.latest_account_id) {
+        localStorage.setItem("account_id", data.latest_account_id);
+        navigate("/chat");
+      }
+    } catch (err: any) {
+      toast({
+        title: "No Analysis Data Found",
+        description: "Please upload a bank statement inside the dashboard first to prime your AI context.",
+        variant: "destructive"
+      });
+      navigate("/upload");
+    } finally {
+      setIsCheckingData(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+      {/* Top Right Auth Boundary */}
+      {isAuthenticated && (
+        <div className="absolute top-6 right-6 z-50">
+          <Button 
+            onClick={logout}
+            className="bg-accent hover:bg-accent/90 text-white rounded-full px-5 shadow-sm transition-all"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      )}
+
       <div className="max-w-4xl w-full animate-fade-in">
         <div className="text-center space-y-8">
           {/* Hero Icon */}
@@ -20,9 +65,9 @@ const Welcome = () => {
           </div>
 
           {/* Title & Description */}
-          <div className="space-y-4">
+          <div className="space-y-4 relative">
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              Your Personal Finance Assistant
+              {isAuthenticated ? `Hi ${user?.username}!` : "Your Personal Finance Assistant"}
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Upload your bank statements and let AI help you understand your spending,
@@ -64,15 +109,47 @@ const Welcome = () => {
           </div>
 
           {/* CTA Button */}
-          <div className="pt-4">
-            <Button
-              size="lg"
-              onClick={() => navigate("/upload")}
-              className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-lg px-8 py-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
-            >
-              Get Started
-              <Sparkles className="ml-2 w-5 h-5" />
-            </Button>
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            {isAuthenticated ? (
+              <>
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/upload")}
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-lg px-8 py-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                >
+                  Upload Statement
+                  <Sparkles className="ml-2 w-5 h-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={handleGoToChat}
+                  disabled={isCheckingData}
+                  className="text-lg px-8 py-6 rounded-2xl shadow-sm hover:shadow-md transition-all border-primary/20 hover:border-primary/50"
+                >
+                  {isCheckingData ? "Verifying..." : "Go to Chat"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  onClick={() => navigate("/signup")}
+                  className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-lg px-8 py-6 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                >
+                  Get Started
+                  <Sparkles className="ml-2 w-5 h-5" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => navigate("/login")}
+                  className="text-lg px-8 py-6 rounded-2xl shadow-sm hover:shadow-md transition-all border-border"
+                >
+                  Log In
+                </Button>
+              </>
+            )}
           </div>
 
           <p className="text-sm text-muted-foreground">
