@@ -49,7 +49,7 @@ const Processing = () => {
       }
     }, 500);
 
-    // 100-second timeout — if data isn't ready by then, show error
+    // 10-minute timeout — if data isn't ready by then, show error
     const timeoutId = setTimeout(() => {
       clearInterval(checkDataInterval);
       clearInterval(progressInterval);
@@ -59,7 +59,7 @@ const Processing = () => {
         "Processing took longer than expected. Please try uploading again or proceed to chat."
       );
       setProgress(Math.min(progress, 90));
-    }, 100000);
+    }, 600000);
 
     return () => {
       clearInterval(messageInterval);

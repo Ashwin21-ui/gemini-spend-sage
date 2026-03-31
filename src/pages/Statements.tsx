@@ -30,6 +30,7 @@ interface Statement {
   bank_name: string;
   statement_start_date: string;
   statement_end_date: string;
+  currency: string;
 }
 
 interface ExpandedState {
@@ -45,6 +46,9 @@ export default function Statements() {
   const [statements, setStatements] = useState<Statement[]>([]);
   const [transactionsMap, setTransactionsMap] = useState<{
     [key: string]: Transaction[];
+  }>({});
+  const [currencyMap, setCurrencyMap] = useState<{
+    [key: string]: string;
   }>({});
   const [expandedStates, setExpandedStates] = useState<ExpandedState>({});
   const [loading, setLoading] = useState(true);
@@ -105,6 +109,10 @@ export default function Statements() {
             ...prev,
             [accountId]: data.transactions,
           }));
+          setCurrencyMap((prev) => ({
+            ...prev,
+            [accountId]: data.currency || "USD",
+          }));
         }
       } catch (error) {
         console.error("Failed to fetch transactions:", error);
@@ -132,10 +140,10 @@ export default function Statements() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = "USD") => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: currency,
     }).format(amount);
   };
 
@@ -232,10 +240,10 @@ export default function Statements() {
                                 }`}
                               >
                                 {txn.type === "credit" ? "+" : "-"}
-                                {formatCurrency(Math.abs(txn.amount))}
+                                {formatCurrency(Math.abs(txn.amount), currencyMap[statement.id] || statement.currency || "USD")}
                               </TableCell>
                               <TableCell className="py-3 text-sm text-right">
-                                {formatCurrency(txn.balance)}
+                                {formatCurrency(txn.balance, currencyMap[statement.id] || statement.currency || "USD")}
                               </TableCell>
                             </TableRow>
                           ))
