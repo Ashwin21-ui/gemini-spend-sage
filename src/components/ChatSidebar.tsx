@@ -48,44 +48,36 @@ function ChatSidebarComponent() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  // Fetch chat history
-  useEffect(() => {
-    let isMounted = true
-    const abortController = new AbortController()
+  // Memoized function to fetch chat history
+  const fetchChatHistory = async () => {
+    if (!token) return
 
-    const fetchChatHistory = async () => {
-      if (!token) return
+    try {
+      const accountId = localStorage.getItem("account_id")
+      const url = accountId
+        ? `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/chat/history/list?account_id=${accountId}`
+        : `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/chat/history/list`
 
-      try {
-        const accountId = localStorage.getItem("account_id")
-        const url = accountId
-          ? `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/chat/history/list?account_id=${accountId}`
-          : `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/chat/history/list`
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: abortController.signal,
-        })
-
-        if (res.ok && isMounted) {
-          const data = await res.json()
-          // Only show chats that have messages
-          const nonEmptyChats = data.filter((chat: any) => chat.message_count > 0)
-          setChatHistory(nonEmptyChats)
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name !== "AbortError") {
-          console.error("Failed to fetch chat history:", error)
-        }
+      if (res.ok) {
+        const data = await res.json()
+        // Only show chats that have messages
+        const nonEmptyChats = data.filter((chat: any) => chat.message_count > 0)
+        setChatHistory(nonEmptyChats)
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== "AbortError") {
+        console.error("Failed to fetch chat history:", error)
       }
     }
+  }
 
+  // Fetch chat history on mount
+  useEffect(() => {
     fetchChatHistory()
-
-    return () => {
-      isMounted = false
-      abortController.abort()
-    }
   }, [token])
 
   const handleNewChat = async () => {
@@ -116,6 +108,8 @@ function ChatSidebarComponent() {
       if (res.ok) {
         const chat = await res.json()
         setSelectedChat(chat.chat_id)
+        // Refresh chat history after creating new chat
+        await fetchChatHistory()
         navigate("/chat", { state: { chatId: chat.chat_id, isNew: true } })
       }
     } catch (error) {
