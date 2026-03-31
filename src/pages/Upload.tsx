@@ -63,6 +63,14 @@ const handleUpload = async () => {
     const formData = new FormData();
     formData.append("file", file);
 
+    // ✅ Clear old data before starting new upload
+    // This prevents processing page from detecting old data and auto-navigating to chat
+    sessionStorage.removeItem("extractedData");
+    localStorage.removeItem("account_id");
+
+    // Navigate to processing immediately so user sees progress
+    navigate("/processing");
+
     const res = await fetch(
       `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/upload-bank-statement`,
       {
@@ -80,13 +88,11 @@ const handleUpload = async () => {
       throw new Error(data.detail || "Upload failed");
     }
 
-    // ✅ Save extracted result and explicitly bind the user's specific backend account scope locally
+    // ✅ Save extracted result only after successful upload verification
     sessionStorage.setItem("extractedData", JSON.stringify(data.extracted_json || {}));
     if (data.account_id) {
       localStorage.setItem("account_id", data.account_id);
     }
-
-    navigate("/processing");
 
   } catch (error: any) {
     const errorMessage = error.message || "Please try again.";
@@ -95,6 +101,8 @@ const handleUpload = async () => {
       description: errorMessage,
       variant: "destructive",
     });
+    // Go back to upload if there was an error
+    navigate("/upload");
   } finally {
     setUploading(false);
   }

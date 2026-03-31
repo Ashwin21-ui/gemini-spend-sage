@@ -5,11 +5,21 @@ import { useNavigate } from "react-router-dom";
 import { Send, ArrowLeft, Sparkles, User, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { SourcesCard } from "@/components/SourcesCard";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  sources?: any[];
 }
+
+const loadingMessages = [
+  "Reading your statement...",
+  "Analyzing spending patterns...",
+  "Finding relevant transactions...",
+  "Generating insights...",
+  "Almost done...",
+];
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -26,6 +36,7 @@ const Chat = () => {
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -33,6 +44,15 @@ const Chat = () => {
   };
 
   useEffect(scrollToBottom, [messages]);
+
+  // Rotate loading messages
+  useEffect(() => {
+    if (!isLoading) return;
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   // ✅ Add this effect to auto-insert spending summary
   useEffect(() => {
@@ -107,6 +127,7 @@ You can ask things like:
       const assistantMessage: Message = {
         role: "assistant",
         content: data.answer,
+        sources: data.sources || [],
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
@@ -157,45 +178,56 @@ You can ask things like:
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex gap-3 animate-slide-up ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              {message.role === "assistant" && (
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-white" />
-                </div>
-              )}
+            <div key={index} className="space-y-2">
               <div
-                className={`max-w-[80%] rounded-2xl p-4 ${
-                  message.role === "user"
-                    ? "bg-gradient-to-r from-primary to-secondary text-white"
-                    : "bg-card border border-border"
+                className={`flex gap-3 animate-slide-up ${
+                  message.role === "user" ? "justify-end" : "justify-start"
                 }`}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {message.content}
-                </p>
+                {message.role === "assistant" && (
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-2xl p-4 ${
+                    message.role === "user"
+                      ? "bg-gradient-to-r from-primary to-secondary text-white"
+                      : "bg-card border border-border"
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content}
+                  </p>
+                </div>
+                {message.role === "user" && (
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                )}
               </div>
-              {message.role === "user" && (
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <User className="w-5 h-5 text-muted-foreground" />
+              {message.role === "assistant" && message.sources && message.sources.length > 0 && (
+                <div className="max-w-[80%] ml-13">
+                  <SourcesCard sources={message.sources} />
                 </div>
               )}
             </div>
           ))}
           {isLoading && (
-            <div className="flex gap-3 animate-pulse">
+            <div className="flex gap-3">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div className="bg-card border border-border rounded-2xl p-4">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100" />
-                  <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200" />
+                <div className="space-y-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0.1s" }} />
+                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                  </div>
+                  <p className="text-sm text-muted-foreground italic">
+                    {loadingMessages[messageIndex]}
+                  </p>
                 </div>
               </div>
             </div>
