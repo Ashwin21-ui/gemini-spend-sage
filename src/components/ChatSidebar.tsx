@@ -2,7 +2,7 @@
 
 import { useState, useEffect, memo } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus, FileText, Clock, Trash2, MessageSquare } from "lucide-react"
+import { Plus, FileText, Clock, Trash2, MessageSquare, Home, LogOut, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/contexts/AuthContext"
@@ -39,7 +40,7 @@ const formatDate = (dateString: string) => {
 
 function ChatSidebarComponent() {
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const { token, logout, user } = useAuth()
   const { toast } = useToast()
   const { state } = useSidebar()
 
@@ -161,6 +162,11 @@ function ChatSidebarComponent() {
     }
   }
 
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
+
   return (
     <Sidebar>
       <SidebarContent className="bg-card/50">
@@ -173,6 +179,20 @@ function ChatSidebarComponent() {
           >
             <Plus className="w-4 h-4 mr-2" />
             {state === "collapsed" ? "" : "New Chat"}
+          </Button>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Home Section */}
+        <SidebarGroup>
+          <Button
+            onClick={() => navigate("/")}
+            variant="outline"
+            className="w-full justify-start gap-2"
+          >
+            <Home className="w-4 h-4" />
+            {state !== "collapsed" && "Home"}
           </Button>
         </SidebarGroup>
 
@@ -241,6 +261,36 @@ function ChatSidebarComponent() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Profile and Logout Section */}
+      <SidebarFooter className="bg-card/50 border-t border-border">
+        <SidebarGroup>
+          {/* Profile Info */}
+          {state !== "collapsed" && user && (
+            <div className="px-2 py-3 bg-muted rounded-lg mb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{user.username}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Logout Button */}
+          <Button
+            onClick={handleLogout}
+            variant="destructive"
+            className="w-full justify-start gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            {state !== "collapsed" && "Logout"}
+          </Button>
+        </SidebarGroup>
+      </SidebarFooter>
     </Sidebar>
   )
 }
