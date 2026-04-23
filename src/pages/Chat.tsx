@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { SourcesCard } from "@/components/SourcesCard";
 import { ChatSidebar } from "@/components/ChatSidebar";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 interface Message {
   role: "user" | "assistant";
@@ -29,6 +29,7 @@ const Chat = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { token } = useAuth();
+  const { state } = useSidebar();
 
   const [chatId, setChatId] = useState<string | null>(
     location.state?.chatId || null
@@ -42,6 +43,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const [isSavingMessage, setIsSavingMessage] = useState(false);
+  const [currency, setCurrency] = useState<string>("USD");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -127,6 +129,33 @@ const Chat = () => {
 
     initializeChat();
   }, [chatId, isNewChat, token]);
+
+  // Fetch currency for the account
+  useEffect(() => {
+    const fetchAccountCurrency = async () => {
+      const accountId = localStorage.getItem("account_id");
+      if (!accountId || !token) return;
+
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000"}/api/user-data/transactions/${accountId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          setCurrency(data.currency || "USD");
+        }
+      } catch (error) {
+        console.error("Failed to fetch account currency:", error);
+        setCurrency("USD");
+      }
+    };
+
+    fetchAccountCurrency();
+  }, [token]);
 
   // Handle pending message after new chat is created
   useEffect(() => {
@@ -354,18 +383,19 @@ You can ask things like:
       <SidebarInset>
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
           {/* Header */}
-          <div className="bg-card/50 backdrop-blur-sm border-b border-border p-4">
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger className="rounded-xl" />
-                <div>
-                  <h1 className="text-xl font-bold">Finance Assistant</h1>
-                  <p className="text-sm text-muted-foreground">
-                    AI-powered insights
-                  </p>
-                </div>
+          <div className="bg-card/50 backdrop-blur-sm border-b border-border">
+            <div className="flex items-center h-20 px-4 gap-4">
+              {/* Sidebar Trigger positioned on far left */}
+              <SidebarTrigger className="rounded-xl flex-shrink-0" />
+              
+              <div className="flex-1">
+                <h1 className="text-xl font-bold">Finance Assistant</h1>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered insights
+                </p>
               </div>
-              <div className="flex flex-col text-right">
+              
+              <div className="flex-shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
@@ -416,7 +446,7 @@ You can ask things like:
                     message.sources &&
                     message.sources.length > 0 && (
                       <div className="max-w-[80%] ml-13">
-                        <SourcesCard sources={message.sources} />
+                        <SourcesCard sources={message.sources} currency={currency} />
                       </div>
                     )}
                 </div>

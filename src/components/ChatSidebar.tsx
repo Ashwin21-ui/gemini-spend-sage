@@ -277,8 +277,8 @@ function ChatSidebarComponent() {
           {/* Logout Button */}
           <Button
             onClick={handleLogout}
-            variant="destructive"
-            className="w-full justify-start gap-2"
+            variant="ghost"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <LogOut className="w-4 h-4" />
             {state !== "collapsed" && "Logout"}

@@ -101,9 +101,9 @@ const Welcome = () => {
               <div className="bg-accent/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4 mx-auto">
                 <Target className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="font-semibold mb-2">Set Goals</h3>
+              <h3 className="font-semibold mb-2">Ask Suggestions</h3>
               <p className="text-sm text-muted-foreground">
-                Create budgets and reach your financial targets
+                Query your needs and get personalized financial advice
               </p>
             </div>
           </div>

@@ -15,10 +15,18 @@ interface Source {
 
 interface SourcesCardProps {
   sources: Source[];
+  currency?: string;
 }
 
-export const SourcesCard: React.FC<SourcesCardProps> = ({ sources }) => {
+export const SourcesCard: React.FC<SourcesCardProps> = ({ sources, currency = "USD" }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const formatCurrency = (amount: number, curr: string = "USD") => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: curr,
+    }).format(amount);
+  };
 
   if (!sources || sources.length === 0) {
     return null;
@@ -100,7 +108,7 @@ export const SourcesCard: React.FC<SourcesCardProps> = ({ sources }) => {
                         {source.dates[i]}
                       </span>
                       <span className="font-semibold text-foreground">
-                        ${Math.abs(amount).toFixed(2)}
+                        {formatCurrency(Math.abs(amount), currency)}
                       </span>
                     </div>
                   ))}
